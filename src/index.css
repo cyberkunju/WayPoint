@@ -1,6 +1,5 @@
 @import 'tailwindcss';
 @import "tw-animate-css";
-@import './styles/accessibility.css';
 
 @layer base {
   * {
