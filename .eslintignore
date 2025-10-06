@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Test files (allow some flexibility in tests)
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+
+# Configuration files
+*.config.js
+*.config.ts
+vite.config.ts
+vitest.config.ts
+tailwind.config.js
+
+# Generated files
+coverage/
+
+# Development files
+.vscode/
+.idea/

@@ -1,8 +1,10 @@
 import { QuickAddBar } from './QuickAddBar';
 import { TaskCard } from './TaskCard';
+import { VirtualizedTaskList } from './VirtualizedTaskList';
 import { useTaskStore } from '../hooks/use-store';
 import { useAppContext } from '../contexts/AppContext';
 import { useDragAndDrop } from '../hooks/use-drag-drop';
+import { useVirtualization } from '../hooks/use-virtualization';
 import { filterTasks, sortTasks } from '../lib/utils-tasks';
 
 export function TaskList() {
@@ -68,6 +70,7 @@ export function TaskList() {
   };
 
   const filteredTasks = getFilteredTasks();
+  const shouldVirtualize = useVirtualization(filteredTasks.length);
 
   const getViewTitle = () => {
     switch (currentView) {
@@ -81,6 +84,11 @@ export function TaskList() {
       }
     }
   };
+
+  // Use virtualized list for large datasets
+  if (shouldVirtualize) {
+    return <VirtualizedTaskList />;
+  }
 
   return (
     <div className="max-w-4xl mx-auto">
