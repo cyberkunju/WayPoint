@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, memo, useCallback } from 'react';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { 
@@ -25,16 +25,22 @@ import { useUserStore } from '../hooks/use-store';
 import { useAppContext } from '../contexts/AppContext';
 import { cn } from '../lib/utils';
 
-export function TopBar() {
+export const TopBar = memo(function TopBar() {
   const { preferences, updatePreferences } = useUserStore();
   const { setCurrentView, searchQuery, setSearchQuery, currentView } = useAppContext();
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
-  const toggleSidebar = () => {
+  const toggleSidebar = useCallback(() => {
     updatePreferences({ 
       sidebarCollapsed: !(preferences?.sidebarCollapsed || false) 
     });
-  };
+  }, [preferences?.sidebarCollapsed, updatePreferences]);
+
+  const toggleTheme = useCallback(() => {
+    const currentTheme = preferences?.theme || 'light';
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    updatePreferences({ theme: newTheme });
+  }, [preferences?.theme, updatePreferences]);
 
   const viewButtons = [
     { id: 'inbox', icon: List, label: 'List View' },
@@ -107,11 +113,7 @@ export function TopBar() {
         <Button 
           variant="ghost" 
           size="sm"
-          onClick={() => {
-            const currentTheme = preferences?.theme || 'light';
-            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-            updatePreferences({ theme: newTheme });
-          }}
+          onClick={toggleTheme}
         >
           <Moon size={20} />
         </Button>
@@ -142,4 +144,4 @@ export function TopBar() {
       </div>
     </header>
   );
-}
+});

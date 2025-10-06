@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Layout } from './components/Layout';
 import { TaskList } from './components/TaskList';
 import { KanbanBoard } from './components/KanbanBoard';
@@ -19,7 +20,8 @@ function App() {
   // Enable keyboard shortcuts
   useKeyboardShortcuts();
 
-  const renderMainContent = () => {
+  // Memoize the rendered content to prevent unnecessary re-renders
+  const renderMainContent = useMemo(() => {
     switch (currentView) {
       case 'kanban':
         return <KanbanBoard />;
@@ -37,11 +39,11 @@ function App() {
       default:
         return <TaskList />;
     }
-  };
+  }, [currentView]);
 
   return (
     <Layout>
-      {renderMainContent()}
+      {renderMainContent}
     </Layout>
   );
 }

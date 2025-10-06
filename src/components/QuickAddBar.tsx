@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, memo, useCallback, useMemo } from 'react';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -7,7 +7,7 @@ import { parseNaturalLanguage } from '../lib/utils-tasks';
 import { useTaskStore } from '../hooks/use-store';
 import { toast } from 'sonner';
 
-export function QuickAddBar() {
+export const QuickAddBar = memo(function QuickAddBar() {
   const [input, setInput] = useState('');
   const [showPreview, setShowPreview] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -16,7 +16,7 @@ export function QuickAddBar() {
   const inputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
 
-  const parsed = parseNaturalLanguage(input);
+  const parsed = useMemo(() => parseNaturalLanguage(input), [input]);
 
   // Check for speech recognition support
   useEffect(() => {
@@ -203,4 +203,4 @@ export function QuickAddBar() {
       </form>
     </div>
   );
-}
+});

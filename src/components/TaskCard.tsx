@@ -17,6 +17,7 @@ import { useTaskStore } from '../hooks/use-store';
 import { useAppContext } from '../contexts/AppContext';
 import { cn } from '../lib/utils';
 import { toast } from 'sonner';
+import { memo, useCallback, useMemo } from 'react';
 
 interface TaskCardProps {
   task: Task;
@@ -28,11 +29,11 @@ interface TaskCardProps {
   compact?: boolean;
 }
 
-export function TaskCard({ task, isDragging, isDraggedOver, onDragStart, onDragEnd, showProject, compact }: TaskCardProps) {
+export const TaskCard = memo(function TaskCard({ task, isDragging, isDraggedOver, onDragStart, onDragEnd, showProject, compact }: TaskCardProps) {
   const { toggleTask } = useTaskStore();
   const { setSelectedTaskId, setIsDetailPanelOpen } = useAppContext();
 
-  const handleToggle = (e: React.MouseEvent) => {
+  const handleToggle = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     toggleTask(task.id);
     
@@ -41,15 +42,18 @@ export function TaskCard({ task, isDragging, isDraggedOver, onDragStart, onDragE
     } else {
       toast('Task reopened');
     }
-  };
+  }, [task.id, task.completed, toggleTask]);
 
-  const handleClick = () => {
+  const handleClick = useCallback(() => {
     setSelectedTaskId(task.id);
     setIsDetailPanelOpen(true);
-  };
+  }, [task.id, setSelectedTaskId, setIsDetailPanelOpen]);
 
-  const priorityColor = getPriorityColor(task.priority);
-  const overdue = task.dueDate && !task.completed && isOverdue(task.dueDate);
+  const priorityColor = useMemo(() => getPriorityColor(task.priority), [task.priority]);
+  const overdue = useMemo(() => 
+    task.dueDate && !task.completed && isOverdue(task.dueDate),
+    [task.dueDate, task.completed]
+  );
 
   return (
     <TaskContextMenu task={task}>
@@ -154,4 +158,4 @@ export function TaskCard({ task, isDragging, isDraggedOver, onDragStart, onDragE
     </div>
     </TaskContextMenu>
   );
-}
+});

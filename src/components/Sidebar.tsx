@@ -1,3 +1,4 @@
+import { memo, useCallback } from 'react';
 import { Button } from './ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
@@ -22,7 +23,7 @@ import { useAppContext } from '../contexts/AppContext';
 import { cn } from '../lib/utils';
 import { Project } from '../lib/types';
 
-export function Sidebar() {
+export const Sidebar = memo(function Sidebar() {
   const { projects, addProject, updateProject } = useTaskStore();
   const { preferences } = useUserStore();
   const { currentView, setCurrentView } = useAppContext();
@@ -42,16 +43,16 @@ export function Sidebar() {
     { id: 'mindmap', label: 'Mind Map', icon: Graph },
   ];
 
-  const handleProjectToggle = (projectId: string) => {
+  const handleProjectToggle = useCallback((projectId: string) => {
     const project = projects?.find(p => p.id === projectId);
     if (project) {
       updateProject(projectId, { isExpanded: !project.isExpanded });
     }
-  };
+  }, [projects, updateProject]);
 
-  const handleAddProject = () => {
+  const handleAddProject = useCallback(() => {
     addProject({ name: 'New Project' });
-  };
+  }, [addProject]);
 
   const renderProject = (project: Project, level = 0) => {
     const hasChildren = projects?.some(p => p.parentId === project.id);
@@ -221,4 +222,4 @@ export function Sidebar() {
       </div>
     </aside>
   );
-}
+});
