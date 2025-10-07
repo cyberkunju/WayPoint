@@ -14,28 +14,28 @@ export function parseNaturalLanguage(input: string): ParsedTask {
   const projectMatch = input.match(/#(\w+)/);
   if (projectMatch) {
     result.projectId = projectMatch[1];
-    result.title = result.title.replace(/#\w+/g, '').trim();
+    result.title = result.title.replace(/#\w+/, '').replace(/\s\s+/g, ' ').trim();
   }
 
   // Parse labels (+label)
   const labelMatches = input.match(/\+(\w+)/g);
   if (labelMatches) {
     result.labels = labelMatches.map(label => label.slice(1));
-    result.title = result.title.replace(/\+\w+/g, '').trim();
+    result.title = result.title.replace(/\+\w+/g, '').replace(/\s\s+/g, ' ').trim();
   }
 
   // Parse priority (!p1, !p2, !p3, !p4)
   const priorityMatch = input.match(/!p([1-4])/);
   if (priorityMatch) {
     result.priority = parseInt(priorityMatch[1]) as 1 | 2 | 3 | 4;
-    result.title = result.title.replace(/!p[1-4]/g, '').trim();
+    result.title = result.title.replace(/!p[1-4]/, '').replace(/\s\s+/g, ' ').trim();
   }
 
   // Parse assignee (@user)
   const assigneeMatch = input.match(/@(\w+)/);
   if (assigneeMatch) {
     result.assignee = assigneeMatch[1];
-    result.title = result.title.replace(/@\w+/g, '').trim();
+    result.title = result.title.replace(/@\w+/, '').replace(/\s\s+/g, ' ').trim();
   }
 
   // Parse dates (basic implementation)
