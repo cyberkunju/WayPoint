@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Plus, Trash, PencilSimple, Target, CheckCircle } from '@phosphor-icons/react';
+import { Plus, Trash, PencilSimple, Target, CheckCircle, Minus } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -51,7 +51,7 @@ export function MindMapView() {
     const radius = 150 + (parentNode.level * 50);
     const angleStep = (2 * Math.PI) / Math.max(totalChildren, 1);
     const angle = angleStep * childIndex - Math.PI / 2;
-    
+
     return {
       x: parentNode.x + Math.cos(angle) * radius,
       y: parentNode.y + Math.sin(angle) * radius
@@ -65,7 +65,8 @@ export function MindMapView() {
 
     const newNodeId = `node_${Date.now()}`;
     const childIndex = parentNode.children.length;
-    const position = generateNodePosition(parentNode, childIndex, parentNode.children.length + 1);
+    const totalChildren = parentNode.children.length + 1;
+    const position = generateNodePosition(parentNode, childIndex, totalChildren);
 
     const newNode: MindMapNode = {
       id: newNodeId,
@@ -79,14 +80,28 @@ export function MindMapView() {
       isTask: false
     };
 
-    setNodes(prev => ({
-      ...prev,
-      [newNodeId]: newNode,
-      [parentId]: {
-        ...parentNode,
-        children: [...parentNode.children, newNodeId]
-      }
-    }));
+    setNodes(prev => {
+      const newNodes = {
+        ...prev,
+        [newNodeId]: newNode,
+        [parentId]: {
+          ...parentNode,
+          children: [...parentNode.children, newNodeId]
+        }
+      };
+
+      // Re-layout children of the parent node to ensure they are evenly spaced
+      const updatedParent = newNodes[parentId];
+      updatedParent.children.forEach((childId, index) => {
+        const childNode = newNodes[childId];
+        if (childNode) {
+          const newPosition = generateNodePosition(updatedParent, index, totalChildren);
+          newNodes[childId] = { ...childNode, ...newPosition };
+        }
+      });
+
+      return newNodes;
+    });
 
     setConnections(prev => [...prev, { from: parentId, to: newNodeId }]);
     setSelectedNode(newNodeId);
@@ -108,41 +123,37 @@ export function MindMapView() {
   const deleteNode = useCallback((nodeId: string) => {
     if (nodeId === 'root') return;
 
-    const nodeToDelete = nodes[nodeId];
-    if (!nodeToDelete) return;
-
-    // Recursively delete children
-    const deleteChildren = (id: string) => {
+    let nodesToDelete: string[] = [];
+    const findChildren = (id: string) => {
+      nodesToDelete.push(id);
       const node = nodes[id];
       if (node) {
-        node.children.forEach(deleteChildren);
+        node.children.forEach(findChildren);
       }
     };
+    findChildren(nodeId);
 
-    deleteChildren(nodeId);
-
-    // Remove from parent's children
-    if (nodeToDelete.parentId) {
-      const parent = nodes[nodeToDelete.parentId];
-      if (parent) {
-        setNodes(prev => ({
-          ...prev,
-          [nodeToDelete.parentId!]: {
-            ...parent,
-            children: parent.children.filter(childId => childId !== nodeId)
-          }
-        }));
-      }
-    }
-
-    // Remove node and its connections
     setNodes(prev => {
       const newNodes = { ...prev };
-      delete newNodes[nodeId];
+      const nodeToDelete = newNodes[nodeId];
+
+      // Remove from parent's children array
+      if (nodeToDelete?.parentId) {
+        const parent = newNodes[nodeToDelete.parentId];
+        if (parent) {
+          parent.children = parent.children.filter(childId => childId !== nodeId);
+        }
+      }
+
+      // Delete the node and all its descendants
+      nodesToDelete.forEach(id => {
+        delete newNodes[id];
+      });
+
       return newNodes;
     });
 
-    setConnections(prev => prev.filter(conn => conn.from !== nodeId && conn.to !== nodeId));
+    setConnections(prev => prev.filter(conn => !nodesToDelete.includes(conn.from) && !nodesToDelete.includes(conn.to)));
     setSelectedNode(null);
   }, [nodes]);
 
@@ -151,10 +162,8 @@ export function MindMapView() {
     const node = nodes[nodeId];
     if (!node || node.isTask) return;
 
-    // Add to tasks
     addTask({ title: node.text });
-    
-    // Mark as task
+
     setNodes(prev => ({
       ...prev,
       [nodeId]: {
@@ -168,30 +177,40 @@ export function MindMapView() {
 
   // Handle mouse events for dragging
   const handleMouseDown = useCallback((e: React.MouseEvent, nodeId: string) => {
-    if (e.button !== 0) return; // Only left click
-    
+    if (e.button !== 0) return;
+
     const node = nodes[nodeId];
     if (!node) return;
 
     setDraggedNode(nodeId);
     setSelectedNode(nodeId);
-    
+
     const rect = svgRef.current?.getBoundingClientRect();
     if (rect) {
+      const clientX = e.clientX;
+      const clientY = e.clientY;
+      const svgX = (clientX - rect.left) / zoom + pan.x;
+      const svgY = (clientY - rect.top) / zoom + pan.y;
+
       setDragOffset({
-        x: e.clientX - rect.left - node.x,
-        y: e.clientY - rect.top - node.y
+        x: svgX - node.x,
+        y: svgY - node.y
       });
     }
-  }, [nodes]);
+  }, [nodes, zoom, pan]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (!draggedNode) return;
 
     const rect = svgRef.current?.getBoundingClientRect();
     if (rect) {
-      const newX = e.clientX - rect.left - dragOffset.x;
-      const newY = e.clientY - rect.top - dragOffset.y;
+      const clientX = e.clientX;
+      const clientY = e.clientY;
+      const svgX = (clientX - rect.left) / zoom + pan.x;
+      const svgY = (clientY - rect.top) / zoom + pan.y;
+
+      const newX = svgX - dragOffset.x;
+      const newY = svgY - dragOffset.y;
 
       setNodes(prev => ({
         ...prev,
@@ -202,32 +221,30 @@ export function MindMapView() {
         }
       }));
     }
-  }, [draggedNode, dragOffset]);
+  }, [draggedNode, dragOffset, zoom, pan]);
 
   const handleMouseUp = useCallback(() => {
     setDraggedNode(null);
-    setDragOffset({ x: 0, y: 0 });
   }, []);
 
   // Zoom and pan controls
   const handleZoom = useCallback((delta: number) => {
-    setZoom(prev => Math.max(0.1, Math.min(3, prev + delta)));
+    setZoom(prev => Math.max(0.2, Math.min(3, prev + delta)));
   }, []);
 
   const handleResetView = useCallback(() => {
     setZoom(1);
     setPan({ x: 0, y: 0 });
-    setViewBox('0 0 800 600');
   }, []);
 
-  // Update viewBox based on zoom and pan
   useEffect(() => {
     const width = 800 / zoom;
     const height = 600 / zoom;
-    const x = pan.x;
-    const y = pan.y;
+    const x = -pan.x;
+    const y = -pan.y;
     setViewBox(`${x} ${y} ${width} ${height}`);
   }, [zoom, pan]);
+
 
   return (
     <div className="h-full flex flex-col">
@@ -239,7 +256,7 @@ export function MindMapView() {
             Brainstorm & Convert to Tasks
           </Badge>
         </div>
-        
+
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
@@ -253,9 +270,9 @@ export function MindMapView() {
             variant="outline"
             size="sm"
             onClick={() => handleZoom(-0.1)}
-            disabled={zoom <= 0.1}
+            disabled={zoom <= 0.2}
           >
-            <Trash className="w-4 h-4" />
+            <Minus className="w-4 h-4" />
           </Button>
           <Button
             variant="outline"
@@ -275,66 +292,67 @@ export function MindMapView() {
         <svg
           ref={svgRef}
           viewBox={viewBox}
-          className="w-full h-full cursor-move"
+          className="w-full h-full cursor-grab active:cursor-grabbing"
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
         >
           {/* Connections */}
-          <g className="connections">
-            {connections.map((conn, index) => {
+          <g>
+            {connections.map((conn) => {
               const fromNode = nodes[conn.from];
               const toNode = nodes[conn.to];
               if (!fromNode || !toNode) return null;
 
               return (
                 <line
-                  key={`${conn.from}-${conn.to}-${index}`}
+                  key={`${conn.from}-${conn.to}`}
                   x1={fromNode.x}
                   y1={fromNode.y}
                   x2={toNode.x}
                   y2={toNode.y}
                   stroke="hsl(var(--muted-foreground))"
-                  strokeWidth="2"
-                  strokeOpacity="0.6"
+                  strokeWidth={1.5 / zoom}
+                  opacity="0.6"
                 />
               );
             })}
           </g>
 
           {/* Nodes */}
-          <g className="nodes">
+          <g>
             {Object.values(nodes).map((node) => (
-              <g key={node.id}>
-                {/* Node Circle */}
+              <g
+                key={node.id}
+                transform={`translate(${node.x}, ${node.y})`}
+                onMouseDown={(e) => handleMouseDown(e, node.id)}
+                onClick={() => setSelectedNode(node.id)}
+                className="cursor-pointer"
+              >
                 <circle
-                  cx={node.x}
-                  cy={node.y}
                   r={node.level === 0 ? 40 : 30}
                   fill={
-                    node.isTask 
-                      ? "hsl(var(--success))" 
-                      : node.level === 0 
-                        ? "hsl(var(--primary))" 
-                        : "hsl(var(--accent))"
+                    node.isTask
+                      ? "hsl(var(--success))"
+                      : node.level === 0
+                        ? "hsl(var(--primary))"
+                        : "hsl(var(--secondary))"
                   }
                   stroke={selectedNode === node.id ? "hsl(var(--ring))" : "transparent"}
-                  strokeWidth="3"
-                  className="cursor-pointer hover:opacity-80 transition-opacity"
-                  onMouseDown={(e) => handleMouseDown(e, node.id)}
-                  onClick={() => setSelectedNode(node.id)}
+                  strokeWidth={3 / zoom}
+                  className="hover:opacity-90 transition-opacity"
                 />
 
-                {/* Node Text */}
                 {node.isEditing ? (
                   <foreignObject
-                    x={node.x - 60}
-                    y={node.y - 10}
-                    width="120"
-                    height="20"
+                    x={-50}
+                    y={-12}
+                    width="100"
+                    height="24"
+                    transform={`scale(${1 / zoom})`}
                   >
                     <Input
-                      className="text-xs text-center"
+                      className="text-xs text-center p-1"
                       defaultValue={node.text}
                       autoFocus
                       onBlur={(e) => updateNodeText(node.id, e.target.value)}
@@ -347,29 +365,22 @@ export function MindMapView() {
                   </foreignObject>
                 ) : (
                   <text
-                    x={node.x}
-                    y={node.y}
                     textAnchor="middle"
                     dominantBaseline="middle"
-                    fill="white"
-                    fontSize={node.level === 0 ? "14" : "12"}
+                    fill="hsl(var(--primary-foreground))"
+                    fontSize={node.level === 0 ? 14 : 12}
                     fontWeight="500"
                     className="pointer-events-none select-none"
                   >
-                    {node.text.length > 15 ? `${node.text.slice(0, 15)}...` : node.text}
+                    {node.text.length > 12 ? `${node.text.slice(0, 12)}...` : node.text}
                   </text>
                 )}
 
-                {/* Task indicator */}
                 {node.isTask && (
-                  <circle
-                    cx={node.x + 25}
-                    cy={node.y - 25}
-                    r="8"
-                    fill="hsl(var(--success))"
-                  >
-                    <title>Converted to Task</title>
-                  </circle>
+                  <g transform={`translate(20, -20)`}>
+                    <circle r="10" fill="hsl(var(--success-foreground))" />
+                    <CheckCircle size={12} fill="hsl(var(--success))" className="text-white" />
+                  </g>
                 )}
               </g>
             ))}
@@ -378,7 +389,7 @@ export function MindMapView() {
 
         {/* Node Controls */}
         {selectedNode && nodes[selectedNode] && (
-          <Card className="absolute top-4 right-4 p-4 w-64 shadow-lg">
+          <Card className="absolute top-4 right-4 p-4 w-64 shadow-lg bg-card/90 backdrop-blur-sm">
             <h3 className="font-semibold text-sm mb-3 text-foreground">
               Node Actions
             </h3>
@@ -386,17 +397,17 @@ export function MindMapView() {
               <Button
                 variant="outline"
                 size="sm"
-                className="w-full justify-start"
+                className="w-full justify-start gap-2"
                 onClick={() => addChildNode(selectedNode)}
               >
-                <Plus className="w-4 h-4 mr-2" />
+                <Plus className="w-4 h-4" />
                 Add Child Idea
               </Button>
-              
+
               <Button
                 variant="outline"
                 size="sm"
-                className="w-full justify-start"
+                className="w-full justify-start gap-2"
                 onClick={() => {
                   setNodes(prev => ({
                     ...prev,
@@ -407,7 +418,7 @@ export function MindMapView() {
                   }));
                 }}
               >
-                <PencilSimple className="w-4 h-4 mr-2" />
+                <PencilSimple className="w-4 h-4" />
                 Edit Text
               </Button>
 
@@ -415,10 +426,10 @@ export function MindMapView() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full justify-start"
+                  className="w-full justify-start gap-2"
                   onClick={() => convertToTask(selectedNode)}
                 >
-                  <Target className="w-4 h-4 mr-2" />
+                  <Target className="w-4 h-4" />
                   Convert to Task
                 </Button>
               )}
@@ -427,10 +438,10 @@ export function MindMapView() {
                 <Button
                   variant="destructive"
                   size="sm"
-                  className="w-full justify-start"
+                  className="w-full justify-start gap-2"
                   onClick={() => deleteNode(selectedNode)}
                 >
-                  <Trash className="w-4 h-4 mr-2" />
+                  <Trash className="w-4 h-4" />
                   Delete Node
                 </Button>
               )}
@@ -438,7 +449,7 @@ export function MindMapView() {
 
             <div className="mt-4 pt-3 border-t border-border">
               <p className="text-xs text-muted-foreground">
-                <strong>Tip:</strong> Drag nodes to reposition them. Convert ideas to tasks when ready.
+                <strong>Tip:</strong> Drag nodes to reposition them. Click to select.
               </p>
             </div>
           </Card>
@@ -452,11 +463,10 @@ export function MindMapView() {
                 Start Brainstorming
               </h3>
               <p className="text-muted-foreground mb-4">
-                Click on the central node and add child ideas to begin your mind map.
-                Convert promising ideas into actionable tasks.
+                Select the central node and use the "Node Actions" panel to add your first idea.
               </p>
               <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                <CheckCircle className="w-4 h-4" />
+                <CheckCircle className="w-4 h-4 text-primary" />
                 <span>Click • Drag • Create • Convert</span>
               </div>
             </Card>

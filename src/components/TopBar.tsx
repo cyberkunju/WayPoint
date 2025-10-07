@@ -1,25 +1,26 @@
 import { useState, memo, useCallback } from 'react';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuTrigger 
+  DropdownMenuTrigger
 } from './ui/dropdown-menu';
 import { Input } from './ui/input';
 import { KeyboardShortcutsSheet } from './KeyboardShortcutsSheet';
-import { 
-  List, 
-  MagnifyingGlass, 
-  CalendarBlank, 
-  Moon, 
+import {
+  List,
+  MagnifyingGlass,
+  CalendarBlank,
+  Moon,
   Gear,
   SignOut,
   User,
   Kanban,
-  GridFour
+  GridFour,
+  Compass
 } from '@phosphor-icons/react';
 import { useUserStore } from '../hooks/use-store';
 import { useAppContext } from '../contexts/AppContext';
@@ -31,8 +32,8 @@ export const TopBar = memo(function TopBar() {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   const toggleSidebar = useCallback(() => {
-    updatePreferences({ 
-      sidebarCollapsed: !(preferences?.sidebarCollapsed || false) 
+    updatePreferences({
+      sidebarCollapsed: !(preferences?.sidebarCollapsed || false)
     });
   }, [preferences?.sidebarCollapsed, updatePreferences]);
 
@@ -51,17 +52,20 @@ export const TopBar = memo(function TopBar() {
   return (
     <header className="h-14 border-b border-border flex items-center justify-between px-6 bg-background">
       <div className="flex items-center gap-4">
-        <Button 
-          variant="ghost" 
+        <Button
+          variant="ghost"
           size="sm"
           onClick={toggleSidebar}
         >
           <List size={20} />
         </Button>
-        
-        <h1 className="heading-2 text-foreground">
-          ClarityFlow
-        </h1>
+
+        <div className="flex items-center gap-2">
+          <Compass size={24} className="text-primary" />
+          <h1 className="heading-2 text-foreground">
+            WayPoint
+          </h1>
+        </div>
 
         {/* View Switcher */}
         <div className="flex items-center gap-1 ml-6">
@@ -85,8 +89,8 @@ export const TopBar = memo(function TopBar() {
 
       <div className="flex items-center gap-4">
         <div className="relative">
-          <MagnifyingGlass 
-            size={16} 
+          <MagnifyingGlass
+            size={16}
             className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
           />
           <Input
@@ -99,19 +103,10 @@ export const TopBar = memo(function TopBar() {
           />
         </div>
 
-        <Button 
-          variant="ghost" 
-          size="sm"
-          onClick={() => setCurrentView('today')}
-          className="hidden md:flex"
-        >
-          <CalendarBlank size={20} />
-        </Button>
-
         <KeyboardShortcutsSheet />
 
-        <Button 
-          variant="ghost" 
+        <Button
+          variant="ghost"
           size="sm"
           onClick={toggleTheme}
         >
