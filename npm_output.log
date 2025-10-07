@@ -1,0 +1,15 @@
+
+> spark-template@0.0.0 dev
+> vite
+
+[icon-proxy] Checking for exports in directory: /app/node_modules/@phosphor-icons/react
+[icon-proxy] Found package file: /app/node_modules/@phosphor-icons/react/dist/index.mjs
+[icon-proxy] Loaded 1533 exports from /app/node_modules/@phosphor-icons/react/dist/index.mjs
+[icon-proxy] Checking for exports in directory: /app/node_modules/@phosphor-icons/react
+[icon-proxy] Found package file: /app/node_modules/@phosphor-icons/react/dist/index.mjs
+[icon-proxy] Loaded 1533 exports from /app/node_modules/@phosphor-icons/react/dist/index.mjs
+
+  VITE v6.3.5  ready in 683 ms
+
+  ➜  Local:   http://localhost:5000/
+  ➜  Network: use --host to expose
