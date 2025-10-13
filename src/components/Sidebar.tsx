@@ -16,12 +16,15 @@ import {
   Info,
   Kanban,
   ChartLineUp,
-  Graph
+  Graph,
+  Rocket,
+  MapTrifold
 } from '@phosphor-icons/react';
 import { useTaskStore, useUserStore } from '../hooks/use-store';
 import { useAppContext } from '../contexts/AppContext';
 import { cn } from '../lib/utils';
 import { Project } from '../lib/types';
+import { ProjectStatusBadge } from './ProjectStatusBadge';
 
 export const Sidebar = memo(function Sidebar() {
   const { projects, addProject, updateProject } = useTaskStore();
@@ -40,7 +43,13 @@ export const Sidebar = memo(function Sidebar() {
     { id: 'kanban', label: 'Kanban', icon: Kanban },
     { id: 'calendar', label: 'Calendar', icon: CalendarBlank },
     { id: 'gantt', label: 'Gantt Chart', icon: ChartLineUp },
+    { id: 'roadmap', label: 'Roadmap', icon: MapTrifold },
     { id: 'mindmap', label: 'Mind Map', icon: Graph },
+  ];
+
+  const managementItems = [
+    { id: 'epics', label: 'Epics', icon: Rocket },
+    { id: 'projects', label: 'Projects', icon: FolderOpen },
   ];
 
   const handleProjectToggle = useCallback((projectId: string) => {
@@ -94,7 +103,12 @@ export const Sidebar = memo(function Sidebar() {
           />
           
           {!isCollapsed && (
-            <span className="truncate flex-1">{project.name}</span>
+            <>
+              <span className="truncate flex-1">{project.name}</span>
+              {project.status && project.status !== 'active' && (
+                <ProjectStatusBadge status={project.status} showLabel={false} size="sm" />
+              )}
+            </>
           )}
         </div>
 
@@ -148,6 +162,30 @@ export const Sidebar = memo(function Sidebar() {
               {!isCollapsed && <span>{item.label}</span>}
             </Button>
           ))}
+        </div>
+
+        <div className="mt-4">
+          <div className="flex items-center px-3 py-2">
+            {!isCollapsed && (
+              <span className="text-sm font-medium text-muted-foreground">Management</span>
+            )}
+          </div>
+          <div className="space-y-1">
+            {managementItems.map((item) => (
+              <Button
+                key={item.id}
+                variant={currentView === item.id ? "secondary" : "ghost"}
+                className={cn(
+                  "w-full justify-start gap-3",
+                  isCollapsed && "justify-center px-2"
+                )}
+                onClick={() => setCurrentView(item.id)}
+              >
+                <item.icon size={20} />
+                {!isCollapsed && <span>{item.label}</span>}
+              </Button>
+            ))}
+          </div>
         </div>
 
         <div className="mt-4">

@@ -36,6 +36,9 @@ export const TaskList = memo(function TaskList() {
   const filteredTasks = useMemo(() => {
     let filtered = tasks || [];
 
+    // Filter out subtasks - they should only appear under their parent
+    filtered = filtered.filter(task => !task.parentId);
+
     // Apply view-specific filters
     switch (currentView) {
       case 'inbox':
