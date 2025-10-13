@@ -318,7 +318,7 @@ export class ProjectService {
       // Calculate overdue tasks
       const now = new Date().toISOString();
       const overdueTasks = allTasks.filter(
-        task => !task.completed && task.dueDate && task.dueDate < now
+        (task: any) => !task.completed && task.dueDate && task.dueDate < now
       ).length;
       
       // Calculate completion rate

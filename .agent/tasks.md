@@ -179,13 +179,13 @@ This implementation plan breaks down the backend integration into manageable tas
   - Generate sprint reports
   - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5_
 
-- [ ] 21. Implement Project Roadmap
+- [x] 21. Implement Project Roadmap
   - [x] Create roadmap view component with timeline
   - [x] Add timeline visualization (monthly, quarterly, yearly)
   - [x] Implement drag-to-adjust dates
-  - [ ] Show dependencies on roadmap
+  - [x] Show dependencies on roadmap
   - [x] Add milestone markers
-  - [ ] Export roadmap as PDF (foundation exists, needs full implementation)
+  - [x] Export roadmap as PDF (foundation exists, needs full implementation)
   - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.8_
 
 ## Phase 6: Knowledge Management

@@ -23,8 +23,66 @@ vi.mock('@/lib/appwrite', () => ({
 }));
 
 // Mock IndexedDB
+const mockDbInstance = {
+  transaction: vi.fn().mockReturnThis(),
+  objectStore: vi.fn().mockReturnThis(),
+  add: vi.fn().mockImplementation(() => {
+    const req = { onsuccess: null, onerror: null };
+    setTimeout(() => {
+      if (req.onsuccess) req.onsuccess({ target: req });
+    }, 0);
+    return req;
+  }),
+  put: vi.fn().mockImplementation(() => {
+    const req = { onsuccess: null, onerror: null };
+    setTimeout(() => {
+      if (req.onsuccess) req.onsuccess({ target: req });
+    }, 0);
+    return req;
+  }),
+  get: vi.fn().mockImplementation(() => {
+    const req = { onsuccess: null, onerror: null, result: undefined };
+    setTimeout(() => {
+      if (req.onsuccess) req.onsuccess({ target: req });
+    }, 0);
+    return req;
+  }),
+  getAll: vi.fn().mockImplementation(() => {
+    const req = { onsuccess: null, onerror: null, result: [] };
+    setTimeout(() => {
+      if (req.onsuccess) req.onsuccess({ target: req });
+    }, 0);
+    return req;
+  }),
+  delete: vi.fn().mockImplementation(() => {
+    const req = { onsuccess: null, onerror: null };
+    setTimeout(() => {
+      if (req.onsuccess) req.onsuccess({ target: req });
+    }, 0);
+    return req;
+  }),
+  createObjectStore: vi.fn(),
+  objectStoreNames: {
+    contains: vi.fn().mockReturnValue(true),
+  },
+};
+
+const mockIDBOpenDBRequest = {
+  onupgradeneeded: null,
+  onsuccess: null,
+  onerror: null,
+  result: mockDbInstance,
+};
+
 const mockIndexedDB = {
-  open: vi.fn(),
+  open: vi.fn().mockImplementation(() => {
+    setTimeout(() => {
+      if (mockIDBOpenDBRequest.onsuccess) {
+        mockIDBOpenDBRequest.onsuccess({ target: mockIDBOpenDBRequest });
+      }
+    }, 0);
+    return mockIDBOpenDBRequest;
+  }),
   deleteDatabase: vi.fn(),
 };
 
