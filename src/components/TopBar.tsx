@@ -1,40 +1,47 @@
-import { useState } from 'react';
+import { useState, memo, useCallback } from 'react';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuTrigger 
+  DropdownMenuTrigger
 } from './ui/dropdown-menu';
 import { Input } from './ui/input';
 import { KeyboardShortcutsSheet } from './KeyboardShortcutsSheet';
-import { 
-  List, 
-  MagnifyingGlass, 
-  CalendarBlank, 
-  Moon, 
+import {
+  List,
+  MagnifyingGlass,
+  CalendarBlank,
+  Moon,
   Gear,
   SignOut,
   User,
   Kanban,
-  GridFour
+  GridFour,
+  Compass
 } from '@phosphor-icons/react';
 import { useUserStore } from '../hooks/use-store';
 import { useAppContext } from '../contexts/AppContext';
 import { cn } from '../lib/utils';
 
-export function TopBar() {
+export const TopBar = memo(function TopBar() {
   const { preferences, updatePreferences } = useUserStore();
   const { setCurrentView, searchQuery, setSearchQuery, currentView } = useAppContext();
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
-  const toggleSidebar = () => {
-    updatePreferences({ 
-      sidebarCollapsed: !(preferences?.sidebarCollapsed || false) 
+  const toggleSidebar = useCallback(() => {
+    updatePreferences({
+      sidebarCollapsed: !(preferences?.sidebarCollapsed || false)
     });
-  };
+  }, [preferences?.sidebarCollapsed, updatePreferences]);
+
+  const toggleTheme = useCallback(() => {
+    const currentTheme = preferences?.theme || 'light';
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    updatePreferences({ theme: newTheme });
+  }, [preferences?.theme, updatePreferences]);
 
   const viewButtons = [
     { id: 'inbox', icon: List, label: 'List View' },
@@ -45,17 +52,20 @@ export function TopBar() {
   return (
     <header className="h-14 border-b border-border flex items-center justify-between px-6 bg-background">
       <div className="flex items-center gap-4">
-        <Button 
-          variant="ghost" 
+        <Button
+          variant="ghost"
           size="sm"
           onClick={toggleSidebar}
         >
           <List size={20} />
         </Button>
-        
-        <h1 className="heading-2 text-foreground">
-          ClarityFlow
-        </h1>
+
+        <div className="flex items-center gap-2">
+          <Compass size={24} className="text-primary" />
+          <h1 className="heading-2 text-foreground">
+            WayPoint
+          </h1>
+        </div>
 
         {/* View Switcher */}
         <div className="flex items-center gap-1 ml-6">
@@ -79,8 +89,8 @@ export function TopBar() {
 
       <div className="flex items-center gap-4">
         <div className="relative">
-          <MagnifyingGlass 
-            size={16} 
+          <MagnifyingGlass
+            size={16}
             className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
           />
           <Input
@@ -93,25 +103,12 @@ export function TopBar() {
           />
         </div>
 
-        <Button 
-          variant="ghost" 
-          size="sm"
-          onClick={() => setCurrentView('today')}
-          className="hidden md:flex"
-        >
-          <CalendarBlank size={20} />
-        </Button>
-
         <KeyboardShortcutsSheet />
 
-        <Button 
-          variant="ghost" 
+        <Button
+          variant="ghost"
           size="sm"
-          onClick={() => {
-            const currentTheme = preferences?.theme || 'light';
-            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-            updatePreferences({ theme: newTheme });
-          }}
+          onClick={toggleTheme}
         >
           <Moon size={20} />
         </Button>
@@ -142,4 +139,4 @@ export function TopBar() {
       </div>
     </header>
   );
-}
+});

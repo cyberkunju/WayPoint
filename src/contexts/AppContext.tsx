@@ -1,6 +1,69 @@
-import { createContext, useContext, ReactNode, useState, useEffect } from 'react';
-import { useKV } from '@github/spark/hooks';
+import { createContext, useContext, ReactNode } from 'react';
+import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
+// Debug logging
+const DEBUG = true;
+const log = (message: string, data?: any) => {
+  if (DEBUG) {
+    const timestamp = performance.now();
+    console.log(`[AppState ${timestamp.toFixed(2)}ms] ${message}`, data || '');
+  }
+};
+
+interface AppState {
+  selectedTaskId: string | null;
+  currentView: string;
+  searchQuery: string;
+  isDetailPanelOpen: boolean;
+  
+  setSelectedTaskId: (id: string | null) => void;
+  setCurrentView: (view: string) => void;
+  setSearchQuery: (query: string) => void;
+  setIsDetailPanelOpen: (open: boolean) => void;
+}
+
+// Zustand store for app state - blazing fast!
+export const useAppState = create<AppState>()(
+  persist(
+    (set) => ({
+      selectedTaskId: null,
+      currentView: 'inbox',
+      searchQuery: '',
+      isDetailPanelOpen: false,
+      
+      setSelectedTaskId: (id) => {
+        const start = performance.now();
+        set({ selectedTaskId: id });
+        log(`Selected task in ${(performance.now() - start).toFixed(2)}ms`, id);
+      },
+      
+      setCurrentView: (view) => {
+        const start = performance.now();
+        set({ currentView: view });
+        log(`View changed in ${(performance.now() - start).toFixed(2)}ms`, view);
+      },
+      
+      setSearchQuery: (query) => {
+        set({ searchQuery: query });
+      },
+      
+      setIsDetailPanelOpen: (open) => {
+        set({ isDetailPanelOpen: open });
+      },
+    }),
+    {
+      name: 'clarity-app-state',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({ currentView: state.currentView }), // Only persist currentView
+      onRehydrateStorage: () => (state) => {
+        log('App state rehydrated', { currentView: state?.currentView });
+      },
+    }
+  )
+);
+
+// Legacy Context API (for backward compatibility)
 interface AppContextType {
   selectedTaskId: string | null;
   setSelectedTaskId: (id: string | null) => void;
@@ -15,40 +78,11 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  // Use useKV for currentView to persist across refreshes
-  const [persistedView, setPersistedView] = useKV<string>('clarity-current-view', 'inbox');
+  // Use Zustand store
+  const state = useAppState();
   
-  // Use regular React state for UI interactions
-  const [currentView, setCurrentViewState] = useState<string>(persistedView ?? 'inbox');
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [isDetailPanelOpen, setIsDetailPanelOpen] = useState<boolean>(false);
-
-  // Sync currentView with persisted storage
-  useEffect(() => {
-    if (persistedView !== undefined && persistedView !== currentView) {
-      setCurrentViewState(persistedView);
-    }
-  }, [persistedView]);
-
-  const setCurrentView = (view: string) => {
-    setCurrentViewState(view);
-    setPersistedView(view);
-  };
-
   return (
-    <AppContext.Provider
-      value={{
-        selectedTaskId,
-        setSelectedTaskId,
-        currentView,
-        setCurrentView,
-        searchQuery,
-        setSearchQuery,
-        isDetailPanelOpen,
-        setIsDetailPanelOpen,
-      }}
-    >
+    <AppContext.Provider value={state}>
       {children}
     </AppContext.Provider>
   );

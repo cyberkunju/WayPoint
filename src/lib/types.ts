@@ -3,6 +3,7 @@ export interface Task {
   title: string;
   description?: string;
   completed: boolean;
+  completedAt?: string;
   priority: 1 | 2 | 3 | 4;
   dueDate?: string;
   startDate?: string;
@@ -16,6 +17,8 @@ export interface Task {
   estimatedTime?: number;
   actualTime?: number;
   subtasks: string[];
+  position?: number;
+  customFields?: string; // JSON string of CustomFieldValue[]
 }
 
 export interface Project {
@@ -23,8 +26,13 @@ export interface Project {
   name: string;
   description?: string;
   color: string;
+  status: 'active' | 'planning' | 'in_progress' | 'on_hold' | 'completed' | 'archived' | 'blocked';
   parentId?: string;
   isExpanded: boolean;
+  startDate?: string;
+  endDate?: string;
+  labels: string[];
+  position: number;
   createdAt: string;
   updatedAt: string;
 }

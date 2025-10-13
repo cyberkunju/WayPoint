@@ -83,6 +83,24 @@ describe('Task Utilities', () => {
       expect(result.labels).toEqual([]);
       expect(result.projectId).toBeUndefined();
     });
+
+    it('does not strip multiple project tags', () => {
+        const result = parseNaturalLanguage('Task #project1 #project2');
+        expect(result.projectId).toBe('project1');
+        expect(result.title).toBe('Task #project2');
+    });
+
+    it('does not strip multiple assignee tags', () => {
+        const result = parseNaturalLanguage('Task for @john @jane');
+        expect(result.assignee).toBe('john');
+        expect(result.title).toBe('Task for @jane');
+    });
+
+    it('does not strip multiple priority tags', () => {
+        const result = parseNaturalLanguage('Task !p1 !p2');
+        expect(result.priority).toBe(1);
+        expect(result.title).toBe('Task !p2');
+    });
   });
 
   describe('formatDate', () => {

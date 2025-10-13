@@ -2,6 +2,7 @@ import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Checkbox } from './ui/checkbox';
 import { TaskContextMenu } from './TaskContextMenu';
+import { SubtaskList } from './SubtaskList';
 import { 
   CalendarBlank, 
   Tag, 
@@ -9,7 +10,9 @@ import {
   Circle,
   CheckCircle,
   DotsThree,
-  DotsSixVertical
+  DotsSixVertical,
+  CaretDown,
+  CaretRight
 } from '@phosphor-icons/react';
 import { Task } from '../lib/types';
 import { formatDate, getPriorityColor, isOverdue } from '../lib/utils-tasks';
@@ -17,6 +20,7 @@ import { useTaskStore } from '../hooks/use-store';
 import { useAppContext } from '../contexts/AppContext';
 import { cn } from '../lib/utils';
 import { toast } from 'sonner';
+import { memo, useCallback, useMemo, useState } from 'react';
 
 interface TaskCardProps {
   task: Task;
@@ -28,11 +32,20 @@ interface TaskCardProps {
   compact?: boolean;
 }
 
-export function TaskCard({ task, isDragging, isDraggedOver, onDragStart, onDragEnd, showProject, compact }: TaskCardProps) {
-  const { toggleTask } = useTaskStore();
+export const TaskCard = memo(function TaskCard({ task, isDragging, isDraggedOver, onDragStart, onDragEnd, showProject, compact }: TaskCardProps) {
+  const { toggleTask, tasks } = useTaskStore();
   const { setSelectedTaskId, setIsDetailPanelOpen } = useAppContext();
+  const [isExpanded, setIsExpanded] = useState(false);
 
-  const handleToggle = (e: React.MouseEvent) => {
+  // Get subtasks for this task
+  const subtasks = useMemo(() => 
+    tasks?.filter(t => t.parentId === task.id) || [],
+    [tasks, task.id]
+  );
+
+  const hasSubtasks = subtasks.length > 0;
+
+  const handleToggle = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     toggleTask(task.id);
     
@@ -41,15 +54,28 @@ export function TaskCard({ task, isDragging, isDraggedOver, onDragStart, onDragE
     } else {
       toast('Task reopened');
     }
-  };
+  }, [task.id, task.completed, toggleTask]);
 
-  const handleClick = () => {
+  const handleClick = useCallback(() => {
     setSelectedTaskId(task.id);
     setIsDetailPanelOpen(true);
-  };
+  }, [task.id, setSelectedTaskId, setIsDetailPanelOpen]);
 
-  const priorityColor = getPriorityColor(task.priority);
-  const overdue = task.dueDate && !task.completed && isOverdue(task.dueDate);
+  const handleToggleExpand = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsExpanded(!isExpanded);
+  }, [isExpanded]);
+
+  const handleSubtaskClick = useCallback((subtaskId: string) => {
+    setSelectedTaskId(subtaskId);
+    setIsDetailPanelOpen(true);
+  }, [setSelectedTaskId, setIsDetailPanelOpen]);
+
+  const priorityColor = useMemo(() => getPriorityColor(task.priority), [task.priority]);
+  const overdue = useMemo(() => 
+    task.dueDate && !task.completed && isOverdue(task.dueDate),
+    [task.dueDate, task.completed]
+  );
 
   return (
     <TaskContextMenu task={task}>
@@ -79,11 +105,30 @@ export function TaskCard({ task, isDragging, isDraggedOver, onDragStart, onDragE
         onClick={handleClick}
       >
       <div className="flex items-start gap-3">
+        {/* Expand/collapse button for tasks with subtasks */}
+        {hasSubtasks && (
+          <button
+            type="button"
+            onClick={handleToggleExpand}
+            aria-label={isExpanded ? 'Collapse subtasks' : 'Expand subtasks'}
+            className="mt-0.5 text-muted-foreground hover:text-foreground transition-colors focus:ring-2 focus:ring-ring focus:outline-none rounded"
+          >
+            {isExpanded ? (
+              <CaretDown size={16} weight="bold" />
+            ) : (
+              <CaretRight size={16} weight="bold" />
+            )}
+          </button>
+        )}
+
         <button
           type="button"
           onClick={handleToggle}
           aria-label={task.completed ? `Mark "${task.title}" as incomplete` : `Mark "${task.title}" as complete`}
-          className="mt-0.5 text-muted-foreground hover:text-foreground transition-colors focus:ring-2 focus:ring-ring focus:outline-none rounded"
+          className={cn(
+            "mt-0.5 text-muted-foreground hover:text-foreground transition-colors focus:ring-2 focus:ring-ring focus:outline-none rounded",
+            !hasSubtasks && "ml-0"
+          )}
         >
           {task.completed ? (
             <CheckCircle size={20} className="text-primary" />
@@ -93,12 +138,19 @@ export function TaskCard({ task, isDragging, isDraggedOver, onDragStart, onDragE
         </button>
 
         <div className="flex-1 min-w-0">
-          <h3 className={cn(
-            "font-medium text-foreground mb-1",
-            task.completed && "line-through text-muted-foreground"
-          )}>
-            {task.title}
-          </h3>
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className={cn(
+              "font-medium text-foreground",
+              task.completed && "line-through text-muted-foreground"
+            )}>
+              {task.title}
+            </h3>
+            {hasSubtasks && (
+              <span className="text-xs text-muted-foreground">
+                ({subtasks.filter(s => s.completed).length}/{subtasks.length})
+              </span>
+            )}
+          </div>
 
           {task.description && (
             <p className="text-sm text-muted-foreground mb-2 overflow-hidden">
@@ -106,7 +158,7 @@ export function TaskCard({ task, isDragging, isDraggedOver, onDragStart, onDragE
             </p>
           )}
 
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap mb-2">
             {task.dueDate && (
               <Badge 
                 variant="outline" 
@@ -140,6 +192,17 @@ export function TaskCard({ task, isDragging, isDraggedOver, onDragStart, onDragE
               </div>
             )}
           </div>
+
+          {/* Subtasks section */}
+          {hasSubtasks && isExpanded && (
+            <div className="mt-3 pl-4 border-l-2 border-muted">
+              <SubtaskList 
+                parentTask={task}
+                subtasks={subtasks}
+                onSubtaskClick={handleSubtaskClick}
+              />
+            </div>
+          )}
         </div>
 
         <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
@@ -154,4 +217,4 @@ export function TaskCard({ task, isDragging, isDraggedOver, onDragStart, onDragE
     </div>
     </TaskContextMenu>
   );
-}
+});

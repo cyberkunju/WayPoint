@@ -1,4 +1,4 @@
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, memo } from 'react';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { DetailPanel } from './DetailPanel';
@@ -12,20 +12,17 @@ interface LayoutProps {
   children: ReactNode;
 }
 
-export function Layout({ children }: LayoutProps) {
+export const Layout = memo(function Layout({ children }: LayoutProps) {
   const { preferences } = useUserStore();
   const { isDetailPanelOpen } = useAppContext();
 
-  // Apply theme to document
+  // Apply theme to document - optimized to only run when theme changes
   useEffect(() => {
     const theme = preferences?.theme || 'light';
     const root = document.documentElement;
     
-    if (theme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
+    // Use a more efficient approach
+    root.classList.toggle('dark', theme === 'dark');
   }, [preferences?.theme]);
 
   return (
@@ -50,4 +47,4 @@ export function Layout({ children }: LayoutProps) {
       <Toaster richColors position="bottom-right" />
     </div>
   );
-}
+});

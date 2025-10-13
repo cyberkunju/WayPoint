@@ -1,3 +1,4 @@
+import { memo, useCallback } from 'react';
 import { Button } from './ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
@@ -15,14 +16,17 @@ import {
   Info,
   Kanban,
   ChartLineUp,
-  Graph
+  Graph,
+  Rocket,
+  MapTrifold
 } from '@phosphor-icons/react';
 import { useTaskStore, useUserStore } from '../hooks/use-store';
 import { useAppContext } from '../contexts/AppContext';
 import { cn } from '../lib/utils';
 import { Project } from '../lib/types';
+import { ProjectStatusBadge } from './ProjectStatusBadge';
 
-export function Sidebar() {
+export const Sidebar = memo(function Sidebar() {
   const { projects, addProject, updateProject } = useTaskStore();
   const { preferences } = useUserStore();
   const { currentView, setCurrentView } = useAppContext();
@@ -39,19 +43,25 @@ export function Sidebar() {
     { id: 'kanban', label: 'Kanban', icon: Kanban },
     { id: 'calendar', label: 'Calendar', icon: CalendarBlank },
     { id: 'gantt', label: 'Gantt Chart', icon: ChartLineUp },
+    { id: 'roadmap', label: 'Roadmap', icon: MapTrifold },
     { id: 'mindmap', label: 'Mind Map', icon: Graph },
   ];
 
-  const handleProjectToggle = (projectId: string) => {
+  const managementItems = [
+    { id: 'epics', label: 'Epics', icon: Rocket },
+    { id: 'projects', label: 'Projects', icon: FolderOpen },
+  ];
+
+  const handleProjectToggle = useCallback((projectId: string) => {
     const project = projects?.find(p => p.id === projectId);
     if (project) {
       updateProject(projectId, { isExpanded: !project.isExpanded });
     }
-  };
+  }, [projects, updateProject]);
 
-  const handleAddProject = () => {
+  const handleAddProject = useCallback(() => {
     addProject({ name: 'New Project' });
-  };
+  }, [addProject]);
 
   const renderProject = (project: Project, level = 0) => {
     const hasChildren = projects?.some(p => p.parentId === project.id);
@@ -93,7 +103,12 @@ export function Sidebar() {
           />
           
           {!isCollapsed && (
-            <span className="truncate flex-1">{project.name}</span>
+            <>
+              <span className="truncate flex-1">{project.name}</span>
+              {project.status && project.status !== 'active' && (
+                <ProjectStatusBadge status={project.status} showLabel={false} size="sm" />
+              )}
+            </>
           )}
         </div>
 
@@ -147,6 +162,30 @@ export function Sidebar() {
               {!isCollapsed && <span>{item.label}</span>}
             </Button>
           ))}
+        </div>
+
+        <div className="mt-4">
+          <div className="flex items-center px-3 py-2">
+            {!isCollapsed && (
+              <span className="text-sm font-medium text-muted-foreground">Management</span>
+            )}
+          </div>
+          <div className="space-y-1">
+            {managementItems.map((item) => (
+              <Button
+                key={item.id}
+                variant={currentView === item.id ? "secondary" : "ghost"}
+                className={cn(
+                  "w-full justify-start gap-3",
+                  isCollapsed && "justify-center px-2"
+                )}
+                onClick={() => setCurrentView(item.id)}
+              >
+                <item.icon size={20} />
+                {!isCollapsed && <span>{item.label}</span>}
+              </Button>
+            ))}
+          </div>
         </div>
 
         <div className="mt-4">
@@ -221,4 +260,4 @@ export function Sidebar() {
       </div>
     </aside>
   );
-}
+});

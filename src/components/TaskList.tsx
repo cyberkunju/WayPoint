@@ -1,3 +1,4 @@
+import { useMemo, memo } from 'react';
 import { QuickAddBar } from './QuickAddBar';
 import { TaskCard } from './TaskCard';
 import { VirtualizedTaskList } from './VirtualizedTaskList';
@@ -7,7 +8,7 @@ import { useDragAndDrop } from '../hooks/use-drag-drop';
 import { useVirtualization } from '../hooks/use-virtualization';
 import { filterTasks, sortTasks } from '../lib/utils-tasks';
 
-export function TaskList() {
+export const TaskList = memo(function TaskList() {
   const { tasks, projects, updateTask } = useTaskStore();
   const { currentView, searchQuery } = useAppContext();
   const { 
@@ -31,8 +32,12 @@ export function TaskList() {
     }
   };
 
-  const getFilteredTasks = () => {
+  // Memoize filtered tasks to prevent recalculation on every render
+  const filteredTasks = useMemo(() => {
     let filtered = tasks || [];
+
+    // Filter out subtasks - they should only appear under their parent
+    filtered = filtered.filter(task => !task.parentId);
 
     // Apply view-specific filters
     switch (currentView) {
@@ -67,9 +72,7 @@ export function TaskList() {
     }
 
     return sortTasks(filtered, 'priority');
-  };
-
-  const filteredTasks = getFilteredTasks();
+  }, [tasks, currentView, searchQuery]);
   const shouldVirtualize = useVirtualization(filteredTasks.length);
 
   const getViewTitle = () => {
@@ -134,4 +137,4 @@ export function TaskList() {
       </div>
     </div>
   );
-}
+});

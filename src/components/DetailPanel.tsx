@@ -6,12 +6,29 @@ import { X, CalendarBlank, Tag, User, Clock } from '@phosphor-icons/react';
 import { useTaskStore } from '../hooks/use-store';
 import { useAppContext } from '../contexts/AppContext';
 import { formatDate, getPriorityColor } from '../lib/utils-tasks';
+import { TaskDependencies } from './TaskDependencies';
+import { CustomFieldsSection } from './CustomFieldsSection';
+import { account } from '@/lib/appwrite';
+import { useState, useEffect } from 'react';
 
 export function DetailPanel() {
   const { tasks, updateTask } = useTaskStore();
   const { selectedTaskId, setSelectedTaskId, setIsDetailPanelOpen } = useAppContext();
+  const [userId, setUserId] = useState<string>('');
   
   const task = tasks?.find(t => t.id === selectedTaskId);
+
+  useEffect(() => {
+    const getUserId = async () => {
+      try {
+        const user = await account.get();
+        setUserId(user.$id);
+      } catch (err) {
+        console.error('Error getting user:', err);
+      }
+    };
+    getUserId();
+  }, []);
 
   if (!task) {
     return null;
@@ -112,6 +129,26 @@ export function DetailPanel() {
                   <Clock size={16} />
                   <span className="text-sm">{task.estimatedTime} minutes</span>
                 </div>
+              </div>
+            )}
+
+            {/* Task Dependencies */}
+            {userId && (
+              <div className="pt-4 border-t border-border">
+                <TaskDependencies taskId={task.id} userId={userId} />
+              </div>
+            )}
+
+            {/* Custom Fields */}
+            {userId && (
+              <div className="pt-4 border-t border-border">
+                <CustomFieldsSection
+                  taskId={task.id}
+                  userId={userId}
+                  projectId={task.projectId}
+                  customFieldsJson={task.customFields}
+                  onUpdate={(customFieldsJson) => updateTask(task.id, { customFields: customFieldsJson })}
+                />
               </div>
             )}
           </TabsContent>
