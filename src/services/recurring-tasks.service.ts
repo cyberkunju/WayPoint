@@ -257,9 +257,12 @@ export class RecurringTasksService {
       }
 
       case 'monthly': {
-        const dayOfMonth = pattern.dayOfMonth || fromDate.getDate();
-        nextDate.setMonth(nextDate.getMonth() + (pattern.interval || 1), dayOfMonth);
+        const dayOfMonth = pattern.dayOfMonth || nextDate.getDate();
+        nextDate.setMonth(nextDate.getMonth() + (pattern.interval || 1));
         
+        // Handle months with fewer days
+        const lastDayOfMonth = new Date(nextDate.getFullYear(), nextDate.getMonth() + 1, 0).getDate();
+        nextDate.setDate(Math.min(dayOfMonth, lastDayOfMonth));
         break;
       }
 
@@ -407,7 +410,7 @@ export class RecurringTasksService {
       return { valid: false, error: 'Frequency is required' };
     }
 
-    if (pattern.interval < 1) {
+    if (pattern.interval && pattern.interval < 1) {
       return { valid: false, error: 'Interval must be at least 1' };
     }
 

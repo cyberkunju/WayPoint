@@ -10,6 +10,7 @@ import {
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { noteService, type Note, type NoteDocument } from '@/services/note.service';
+import { noteLinksService } from '@/services/note-links.service';
 import { toast } from 'sonner';
 import { useTaskStore } from '@/hooks/use-store';
 
@@ -25,6 +26,7 @@ export function NoteDialog({ userId, note, isOpen, onClose, onSave }: NoteDialog
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const { tasks } = useTaskStore();
 
   useEffect(() => {
     if (note) {
@@ -58,6 +60,28 @@ export function NoteDialog({ userId, note, isOpen, onClose, onSave }: NoteDialog
         savedNote = await noteService.createNote(noteData as NoteDocument);
         toast.success('Note created');
       }
+
+      // Parse and create links
+      const linkRegex = /\[\[(.*?)\]\]/g;
+      const matches = [...content.matchAll(linkRegex)];
+      const linkedNoteTitles = matches.map(match => match[1]);
+
+      // In a real app, you'd have a more robust way to find notes by title
+      const allNotes = await noteService.listNotes(userId);
+      const linkedNotes = allNotes.filter(n => linkedNoteTitles.includes(n.title));
+
+      // First, delete existing links from this note
+      await noteLinksService.deleteLinksFromNote(savedNote.$id, userId);
+
+      // Then, create new links
+      for (const linkedNote of linkedNotes) {
+        await noteLinksService.createNoteLink({
+          userId,
+          sourceNoteId: savedNote.$id,
+          targetNoteId: linkedNote.$id,
+        });
+      }
+
       onSave(savedNote);
       onClose();
     } catch (error) {
@@ -94,7 +118,7 @@ export function NoteDialog({ userId, note, isOpen, onClose, onSave }: NoteDialog
               value={content}
               onChange={(e) => setContent(e.target.value)}
               className="col-span-4 h-48 p-2 border rounded-md"
-              placeholder="Start writing your note..."
+              placeholder="Start writing your note with [[wiki-style links]]..."
             />
           </div>
         </div>

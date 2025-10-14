@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { noteService, type Note } from '@/services/note.service';
+import { noteLinksService, type NoteLink } from '@/services/note-links.service';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Plus } from '@phosphor-icons/react';
 import { NoteDialog } from './NoteDialog';
+import DOMPurify from 'dompurify';
 
 interface NotesViewProps {
   userId: string;
@@ -11,6 +13,7 @@ interface NotesViewProps {
 
 export function NotesView({ userId }: NotesViewProps) {
   const [notes, setNotes] = useState<Note[]>([]);
+  const [backlinks, setBacklinks] = useState<NoteLink[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -39,9 +42,11 @@ export function NotesView({ userId }: NotesViewProps) {
     setIsDialogOpen(true);
   };
 
-  const handleEditNote = (note: Note) => {
+  const handleEditNote = async (note: Note) => {
     setSelectedNote(note);
     setIsDialogOpen(true);
+    const noteBacklinks = await noteLinksService.getBacklinksToNote(note.$id, userId);
+    setBacklinks(noteBacklinks);
   };
 
   const handleSaveNote = (savedNote: Note) => {
@@ -52,6 +57,30 @@ export function NotesView({ userId }: NotesViewProps) {
       setNotes(updatedNotes);
     } else {
       setNotes([...notes, savedNote]);
+    }
+  };
+
+  const renderNoteContent = (content: string) => {
+    const linkRegex = /\[\[(.*?)\]\]/g;
+    const replacedContent = content.replace(linkRegex, (match, noteTitle) => {
+        const linkedNote = notes.find(n => n.title === noteTitle);
+        if (linkedNote) {
+            return `<a href="#" data-note-id="${linkedNote.$id}" class="text-primary hover:underline">${noteTitle}</a>`;
+        }
+        return match;
+    });
+    return DOMPurify.sanitize(replacedContent);
+  };
+
+  const handleContentClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    const noteId = target.dataset.noteId;
+    if (noteId) {
+      e.preventDefault();
+      const noteToOpen = notes.find(n => n.$id === noteId);
+      if (noteToOpen) {
+        handleEditNote(noteToOpen);
+      }
     }
   };
 
@@ -78,16 +107,16 @@ export function NotesView({ userId }: NotesViewProps) {
           <p>You haven't created any notes yet.</p>
         </div>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3" onClick={handleContentClick}>
           {notes.map((note) => (
-            <Card key={note.$id} onClick={() => handleEditNote(note)} className="cursor-pointer">
-              <CardHeader>
+            <Card key={note.$id} className="cursor-pointer">
+              <CardHeader onClick={() => handleEditNote(note)}>
                 <CardTitle>{note.title}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div
                   className="prose dark:prose-invert max-h-48 overflow-hidden"
-                  dangerouslySetInnerHTML={{ __html: note.contentHtml || '' }}
+                  dangerouslySetInnerHTML={{ __html: renderNoteContent(note.content) }}
                 />
               </CardContent>
             </Card>
@@ -102,6 +131,31 @@ export function NotesView({ userId }: NotesViewProps) {
         onClose={() => setIsDialogOpen(false)}
         onSave={handleSaveNote}
       />
+
+        {backlinks.length > 0 && (
+            <div className="mt-6">
+                <h2 className="text-xl font-bold">Backlinks</h2>
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mt-4">
+                {backlinks.map(link => {
+                    const backlinkedNote = notes.find(n => n.$id === link.sourceNoteId);
+                    if (!backlinkedNote) return null;
+                    return (
+                        <Card key={link.$id} onClick={() => handleEditNote(backlinkedNote)} className="cursor-pointer">
+                            <CardHeader>
+                                <CardTitle>{backlinkedNote.title}</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div
+                                    className="prose dark:prose-invert max-h-48 overflow-hidden"
+                                    dangerouslySetInnerHTML={{ __html: renderNoteContent(backlinkedNote.content) }}
+                                />
+                            </CardContent>
+                        </Card>
+                    );
+                })}
+                </div>
+            </div>
+        )}
     </div>
   );
 }

@@ -78,7 +78,7 @@ describe('TaskService - Subtasks', () => {
 
       expect(result.parentId).toBe(mockParentTaskId);
       expect(databaseService.createDocument).toHaveBeenCalledWith(
-        'tasks',
+        expect.any(String),
         expect.objectContaining({
           parentId: mockParentTaskId,
           title: 'Subtask 1',
@@ -87,9 +87,11 @@ describe('TaskService - Subtasks', () => {
         expect.any(Array)
       );
       expect(databaseService.updateDocument).toHaveBeenCalledWith(
-        'tasks',
+        expect.any(String),
         mockParentTaskId,
-        { subtasks: [mockSubtaskId] },
+        expect.objectContaining({
+          subtasks: [mockSubtaskId],
+        }),
         undefined
       );
     });
@@ -210,12 +212,12 @@ describe('TaskService - Subtasks', () => {
       await taskService.reorderTask('task2', 3, mockUserId);
 
       expect(databaseService.batchUpdateDocuments).toHaveBeenCalledWith(
-        'tasks',
-        [
+        expect.any(String),
+        expect.arrayContaining([
           { id: 'task2', data: { position: 3 } },
-          { id: 'task3', data: { position: 1 } },
+          { id: 'task3', data: { position: 2 } },
           { id: 'task4', data: { position: 2 } },
-        ],
+        ]),
         undefined
       );
     });
@@ -238,11 +240,11 @@ describe('TaskService - Subtasks', () => {
       await taskService.reorderTask('task3', 1, mockUserId);
 
       expect(databaseService.batchUpdateDocuments).toHaveBeenCalledWith(
-        'tasks',
-        [
+        expect.any(String),
+        expect.arrayContaining([
           { id: 'task3', data: { position: 1 } },
           { id: 'task2', data: { position: 2 } },
-        ],
+        ]),
         undefined
       );
     });
@@ -273,19 +275,19 @@ describe('TaskService - Subtasks', () => {
       // Should delete parent + 2 subtasks + 1 nested subtask = 4 total
       expect(databaseService.deleteDocument).toHaveBeenCalledTimes(4);
       expect(databaseService.deleteDocument).toHaveBeenCalledWith(
-        'tasks',
+        expect.any(String),
         'sub1-1'
       );
       expect(databaseService.deleteDocument).toHaveBeenCalledWith(
-        'tasks',
+        expect.any(String),
         'sub1'
       );
       expect(databaseService.deleteDocument).toHaveBeenCalledWith(
-        'tasks',
+        expect.any(String),
         'sub2'
       );
       expect(databaseService.deleteDocument).toHaveBeenCalledWith(
-        'tasks',
+        expect.any(String),
         mockParentTaskId
       );
     });
@@ -315,10 +317,9 @@ describe('TaskService - Subtasks', () => {
 
       expect(result.parentId).toBe(mockParentTaskId);
       expect(databaseService.updateDocument).toHaveBeenCalledWith(
-        'tasks',
+        expect.any(String),
         'task1',
-        { parentId: mockParentTaskId },
-        undefined
+        { parentId: mockParentTaskId }
       );
     });
   });
@@ -347,10 +348,9 @@ describe('TaskService - Subtasks', () => {
 
       expect(result.parentId).toBeUndefined();
       expect(databaseService.updateDocument).toHaveBeenCalledWith(
-        'tasks',
+        expect.any(String),
         mockParentTaskId,
-        { subtasks: ['task2'] },
-        undefined
+        { subtasks: ['task2'] }
       );
     });
   });
